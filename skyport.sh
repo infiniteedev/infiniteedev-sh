@@ -1,5 +1,53 @@
 #!/bin/bash
 
+# Function to install PM2 if not installed
+install_pm2() {
+    if ! command -v pm2 &> /dev/null; then
+        echo "PM2 is not installed. Installing PM2..."
+        npm install -g pm2
+        if [ $? -ne 0 ]; then
+            echo "Failed to install PM2."
+            exit 1
+        fi
+        echo "PM2 installed successfully."
+    else
+        echo "PM2 is already installed."
+    fi
+}
+
+# Function to check and install Docker
+install_docker() {
+    if ! command -v docker &> /dev/null; then
+        echo "Docker is not installed. Installing Docker..."
+
+        # Update package index and install prerequisites
+        sudo apt-get update
+        sudo apt-get install -y ca-certificates curl gnupg lsb-release
+
+        # Add Docker's official GPG key
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker.gpg
+
+        # Set up the Docker stable repository
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+        # Install Docker
+        sudo apt-get update
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+        # Add current user to the Docker group
+        sudo usermod -aG docker $USER
+
+        if [ $? -ne 0 ]; then
+            echo "Failed to install Docker."
+            exit 1
+        fi
+
+        echo "Docker installed successfully. Please log out and log in again for the group changes to take effect."
+    else
+        echo "Docker is already installed."
+    fi
+}
+
 # Function to add Node.js repository and install Node.js and Git
 install_node_git() {
     echo "Setting up Node.js 20.x repository and installing Node.js and Git..."
@@ -20,57 +68,6 @@ install_node_git() {
     if [ $? -ne 0 ]; then
         echo "Failed to install Node.js or Git."
         exit 1
-    fi
-
-    # Check if PM2 is installed, if not, install it
-    if ! command -v pm2 &> /dev/null; then
-        echo "PM2 not found, installing PM2..."
-        sudo npm install -g pm2
-        if [ $? -ne 0 ]; then
-            echo "Failed to install PM2."
-            exit 1
-        fi
-    fi
-}
-
-# Function to check and install Docker (with stable version installation)
-install_docker() {
-    # Check if Docker is installed
-    if ! command -v docker &> /dev/null; then
-        echo "Docker is not installed. Installing the latest stable version of Docker..."
-
-        # Update the apt package index and install required packages
-        sudo apt-get update
-        sudo apt-get install -y ca-certificates curl gnupg lsb-release
-
-        # Add Docker's official GPG key
-        sudo mkdir -p /etc/apt/keyrings
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-
-        if [ $? -ne 0 ]; then
-            echo "Failed to fetch Docker's GPG key."
-            exit 1
-        fi
-
-        # Set up the stable repository for Docker
-        echo \
-        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-        $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-        # Update the package index and install the latest stable versions of Docker Engine and CLI
-        sudo apt-get update
-        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-        if [ $? -ne 0 ]; then
-            echo "Failed to install Docker."
-            exit 1
-        fi
-
-        # Add user to docker group
-        sudo usermod -aG docker "$USER"
-        echo "Docker installed successfully. You may need to log out and log in again for the group changes to take effect."
-    else
-        echo "Docker is already installed."
     fi
 }
 
@@ -204,11 +201,11 @@ update_skyport_daemon() {
 # Function to backup Skyport Panel and Daemon
 backup_installations() {
     echo "Backing up Skyport Panel and Daemon..."
-
+    
     # Create backup directory
     backup_dir="/etc/skyport_backup_$(date +%Y%m%d_%H%M%S)"
     mkdir "$backup_dir"
-
+    
     cp -r /etc/skyport "$backup_dir/skyport"
     cp -r /etc/skyportd "$backup_dir/skyportd"
 
@@ -243,35 +240,50 @@ remove_installation() {
             ;;
     esac
 
-    echo "Removal completed."
+    echo "Removal completed successfully!"
 }
 
-# Main Menu
-echo "Choose an action:"
-echo "1. Setup Skyport Panel"
-echo "2. Setup Skyport Daemon"
-echo "3. Setup both Skyport Panel and Daemon"
+# Main script execution
+install_node_git
+install_docker
+install_pm2
+
+echo "Choose an option:"
+echo "1. Install Skyport Panel"
+echo "2. Install Skyport Daemon"
+echo "3. Install both Skyport Panel and Daemon"
 echo "4. Update Skyport Panel"
 echo "5. Update Skyport Daemon"
-echo "6. Backup Skyport Panel and Daemon"
-echo "7. Remove Skyport Panel and Daemon"
+echo "6. Backup installations"
+echo "7. Remove installations"
 
 read -p "Enter your choice (1-7): " choice
 
 case $choice in
-    1) setup_skyport_panel ;;
-    2) setup_skyport_daemon ;;
+    1)
+        setup_skyport_panel
+        ;;
+    2)
+        setup_skyport_daemon
+        ;;
     3)
         setup_skyport_panel
         setup_skyport_daemon
         ;;
-    4) update_skyport_panel ;;
-    5) update_skyport_daemon ;;
-    6) backup_installations ;;
-    7) remove_installation ;;
+    4)
+        update_skyport_panel
+        ;;
+    5)
+        update_skyport_daemon
+        ;;
+    6)
+        backup_installations
+        ;;
+    7)
+        remove_installation
+        ;;
     *)
         echo "Invalid choice. Please enter a number between 1 and 7."
         exit 1
         ;;
 esac
-

@@ -97,6 +97,8 @@ setup_skyport_panel() {
 
     cd panel || { echo "Failed to change directory to panel"; exit 1; }
     npm install
+    npm run seed
+    npm run createUser
 
     if [ $? -ne 0 ]; then
         echo "Error: Failed to install Skyport Panel dependencies!"

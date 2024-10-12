@@ -19,22 +19,45 @@ install_node_git() {
 install_docker() {
     echo "Checking for Docker installation..."
     if ! command -v docker &> /dev/null; then
-        echo "Docker not found, installing Docker..."
-        sudo apt update
-        sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list
+    echo "Docker not found, installing Docker..."
 
-        sudo apt update
-        sudo apt install -y docker-ce docker-ce-cli containerd.io
-        if [ $? -ne 0 ]; then
-            echo "Error: Docker installation failed!"
-            exit 1
-        fi
-        echo "Docker installed successfully."
-    else
-        echo "Docker is already installed."
+    # Update package list
+    sudo apt update
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to update package list!"
+        exit 1
     fi
+
+    # Install necessary packages for Docker installation
+    sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
+
+    # Add Docker's official GPG key
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive.gpg
+    
+    # Add Docker's APT repository
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list
+
+    # Update package index and install Docker
+    sudo apt update
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to update package list after adding Docker repository!"
+        exit 1
+    fi
+
+    sudo apt install -y docker-ce docker-ce-cli containerd.io
+    if [ $? -ne 0 ]; then
+        echo "Error: Docker installation failed!"
+        exit 1
+    fi
+
+    echo "Docker installed successfully."
+else
+    echo "Docker is already installed."
+fi
+
+# Verify Docker installation
+docker --version
+
 }
 
 # --- Function to Install PM2 ---

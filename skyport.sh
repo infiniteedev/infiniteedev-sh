@@ -1,12 +1,50 @@
 #!/bin/bash
 
-# Function to install PM2 if not installed
+# --- Function to Install Node.js and Git ---
+install_node_git() {
+    echo "Installing Node.js 20.x and Git..."
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
+
+    sudo apt update
+    sudo apt install -y nodejs git
+    if [ $? -ne 0 ]; then
+        echo "Error: Node.js or Git installation failed!"
+        exit 1
+    fi
+}
+
+# --- Function to Install Docker ---
+install_docker() {
+    echo "Checking for Docker installation..."
+    if ! command -v docker &> /dev/null; then
+        echo "Docker not found, installing Docker..."
+        sudo apt update
+        sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list
+
+        sudo apt update
+        sudo apt install -y docker-ce docker-ce-cli containerd.io
+        if [ $? -ne 0 ]; then
+            echo "Error: Docker installation failed!"
+            exit 1
+        fi
+        echo "Docker installed successfully."
+    else
+        echo "Docker is already installed."
+    fi
+}
+
+# --- Function to Install PM2 ---
 install_pm2() {
+    echo "Checking for PM2 installation..."
     if ! command -v pm2 &> /dev/null; then
-        echo "PM2 is not installed. Installing PM2..."
+        echo "PM2 not found, installing PM2..."
         npm install -g pm2
         if [ $? -ne 0 ]; then
-            echo "Failed to install PM2."
+            echo "Error: PM2 installation failed!"
             exit 1
         fi
         echo "PM2 installed successfully."
@@ -15,64 +53,19 @@ install_pm2() {
     fi
 }
 
-# Function to check and install Docker
-install_docker() {
-    if ! command -v docker &> /dev/null; then
-        echo "Docker is not installed. Installing Docker..."
-
-        # Update package index and install prerequisites
-        sudo apt-get update
-        sudo apt-get install -y ca-certificates curl gnupg lsb-release
-
-        # Add Docker's official GPG key
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker.gpg
-
-        # Set up the Docker stable repository
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-        # Install Docker
-        sudo apt-get update
-        sudo apt-get install -y docker-ce docker-ce-cli containerd.io
-
-        # Add current user to the Docker group
-        sudo usermod -aG docker $USER
-
-        if [ $? -ne 0 ]; then
-            echo "Failed to install Docker."
-            exit 1
-        fi
-
-        echo "Docker installed successfully. Please log out and log in again for the group changes to take effect."
-    else
-        echo "Docker is already installed."
-    fi
+# --- Function to Install Dependencies ---
+install_dependencies() {
+    echo "Installing dependencies..."
+    install_node_git
+    install_docker
+    install_pm2
 }
 
-# Function to add Node.js repository and install Node.js and Git
-install_node_git() {
-    echo "Setting up Node.js 20.x repository and installing Node.js and Git..."
-
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-
-    if [ $? -ne 0 ]; then
-        echo "Failed to fetch the GPG key for Node.js repository."
-        exit 1
-    fi
-
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
-
-    sudo apt update
-    sudo apt install -y nodejs git
-
-    if [ $? -ne 0 ]; then
-        echo "Failed to install Node.js or Git."
-        exit 1
-    fi
-}
-
-# Function to clone and set up the Skyport Panel
+# --- Function to Clone and Set Up the Skyport Panel ---
 setup_skyport_panel() {
+    echo "Installing dependencies for Skyport Panel..."
+    install_dependencies
+
     echo "Choose an option for cloning Skyport Panel:"
     echo "1. Clone latest build"
     echo "2. Clone a specific version"
@@ -98,33 +91,26 @@ setup_skyport_panel() {
     esac
 
     if [ $? -ne 0 ]; then
-        echo "Failed to clone the Skyport Panel repository."
+        echo "Error: Failed to clone Skyport Panel!"
         exit 1
     fi
 
-    mv panel skyport
-    cd skyport || { echo "Failed to change directory to /etc/skyport"; exit 1; }
-
-    echo "Installing dependencies for Skyport Panel..."
+    cd panel || { echo "Failed to change directory to panel"; exit 1; }
     npm install
 
     if [ $? -ne 0 ]; then
-        echo "Failed to install dependencies for Skyport Panel."
+        echo "Error: Failed to install Skyport Panel dependencies!"
         exit 1
     fi
 
-    echo "Seeding the database for Skyport Panel..."
-    npm run seed
-
-    echo "Creating a user for Skyport Panel..."
-    npm run createUser
-
-    echo "Starting Skyport Panel with PM2..."
-    pm2 start index.js -n skyport_panel
+    echo "Skyport Panel installed successfully."
 }
 
-# Function to clone and set up the Skyport Daemon
+# --- Function to Clone and Set Up the Skyport Daemon ---
 setup_skyport_daemon() {
+    echo "Installing dependencies for Skyport Daemon..."
+    install_dependencies
+
     echo "Choose an option for cloning Skyport Daemon:"
     echo "1. Clone latest build"
     echo "2. Clone a specific version"
@@ -150,140 +136,107 @@ setup_skyport_daemon() {
     esac
 
     if [ $? -ne 0 ]; then
-        echo "Failed to clone the Skyport Daemon repository."
+        echo "Error: Failed to clone Skyport Daemon!"
         exit 1
     fi
 
-    cd skyportd || { echo "Failed to change directory to /etc/skyportd"; exit 1; }
-
-    echo "Installing dependencies for Skyport Daemon..."
+    cd skyportd || { echo "Failed to change directory to skyportd"; exit 1; }
     npm install
 
     if [ $? -ne 0 ]; then
-        echo "Failed to install dependencies for Skyport Daemon."
+        echo "Error: Failed to install Skyport Daemon dependencies!"
         exit 1
     fi
 
-    # Prompt for command to run after installation
-    read -p "Enter the command to run after configuring the daemon: " daemon_command
-    eval "$daemon_command"
-
-    echo "Starting Skyport Daemon with PM2..."
-    pm2 start index.js -n skyport_daemon
+    echo "Skyport Daemon installed successfully."
 }
 
-# Function to update the Skyport Panel
-update_skyport_panel() {
-    echo "Updating Skyport Panel..."
-    cd /etc/skyport || { echo "Skyport Panel directory not found."; exit 1; }
-    git pull
-
-    echo "Installing updated dependencies for Skyport Panel..."
-    npm install
-
-    echo "Restarting Skyport Panel with PM2..."
-    pm2 restart skyport_panel
-}
-
-# Function to update the Skyport Daemon
-update_skyport_daemon() {
-    echo "Updating Skyport Daemon..."
-    cd /etc/skyportd || { echo "Skyport Daemon directory not found."; exit 1; }
-    git pull
-
-    echo "Installing updated dependencies for Skyport Daemon..."
-    npm install
-
-    echo "Restarting Skyport Daemon with PM2..."
-    pm2 restart skyport_daemon
-}
-
-# Function to backup Skyport Panel and Daemon
+# --- Function to Backup Installations ---
 backup_installations() {
-    echo "Backing up Skyport Panel and Daemon..."
-    
-    # Create backup directory
+    echo "Backing up installations..."
     backup_dir="/etc/skyport_backup_$(date +%Y%m%d_%H%M%S)"
-    mkdir "$backup_dir"
-    
-    cp -r /etc/skyport "$backup_dir/skyport"
+    mkdir -p "$backup_dir"
+
+    cp -r /etc/panel "$backup_dir/panel"
     cp -r /etc/skyportd "$backup_dir/skyportd"
 
-    echo "Backup completed. Backup stored in $backup_dir."
+    if [ $? -ne 0 ]; then
+        echo "Error: Backup failed!"
+        exit 1
+    fi
+
+    echo "Backup completed successfully to $backup_dir."
 }
 
-# Function to remove Skyport Panel and Daemon
-remove_installation() {
-    echo "Choose an option to remove:"
-    echo "1. Remove Skyport Panel"
-    echo "2. Remove Skyport Daemon"
-    echo "3. Remove both Skyport Panel and Daemon"
+# --- Function to Remove Installations ---
+remove_installations() {
+    read -p "Are you sure you want to remove Skyport Panel and Daemon? (y/n): " confirm
+    if [[ $confirm != "y" ]]; then
+        echo "Aborting removal."
+        exit 0
+    fi
 
-    read -p "Enter your choice (1, 2, or 3): " remove_choice
+    echo "Removing Skyport Panel..."
+    rm -rf /etc/panel
+    echo "Removing Skyport Daemon..."
+    rm -rf /etc/skyportd
 
-    case $remove_choice in
+    echo "Removing installed dependencies..."
+    sudo apt purge -y nodejs git docker-ce docker-ce-cli containerd.io
+    sudo apt autoremove -y
+
+    echo "Installations removed successfully."
+}
+
+# --- Main Menu ---
+while true; do
+    echo "Choose an option:"
+    echo "1. Install Skyport Panel"
+    echo "2. Install Skyport Daemon"
+    echo "3. Install both Skyport Panel and Daemon"
+    echo "4. Update Skyport Panel"
+    echo "5. Update Skyport Daemon"
+    echo "6. Backup installations"
+    echo "7. Remove installations"
+    echo "8. Install Dependencies"
+    echo "9. Exit"
+
+    read -p "Enter your choice (1-9): " choice
+
+    case $choice in
         1)
-            echo "Removing Skyport Panel..."
-            rm -rf /etc/skyport
+            setup_skyport_panel
             ;;
         2)
-            echo "Removing Skyport Daemon..."
-            rm -rf /etc/skyportd
+            setup_skyport_daemon
             ;;
         3)
-            echo "Removing both Skyport Panel and Daemon..."
-            rm -rf /etc/skyport /etc/skyportd
+            setup_skyport_panel
+            setup_skyport_daemon
+            ;;
+        4)
+            echo "Updating Skyport Panel..."
+            # Add your update logic here
+            ;;
+        5)
+            echo "Updating Skyport Daemon..."
+            # Add your update logic here
+            ;;
+        6)
+            backup_installations
+            ;;
+        7)
+            remove_installations
+            ;;
+        8)
+            install_dependencies
+            ;;
+        9)
+            echo "Exiting..."
+            exit 0
             ;;
         *)
-            echo "Invalid choice for removal. Please enter 1, 2, or 3."
-            exit 1
+            echo "Invalid option! Please enter a number between 1 and 9."
             ;;
     esac
-
-    echo "Removal completed successfully!"
-}
-
-# Main script execution
-install_node_git
-install_docker
-install_pm2
-
-echo "Choose an option:"
-echo "1. Install Skyport Panel"
-echo "2. Install Skyport Daemon"
-echo "3. Install both Skyport Panel and Daemon"
-echo "4. Update Skyport Panel"
-echo "5. Update Skyport Daemon"
-echo "6. Backup installations"
-echo "7. Remove installations"
-
-read -p "Enter your choice (1-7): " choice
-
-case $choice in
-    1)
-        setup_skyport_panel
-        ;;
-    2)
-        setup_skyport_daemon
-        ;;
-    3)
-        setup_skyport_panel
-        setup_skyport_daemon
-        ;;
-    4)
-        update_skyport_panel
-        ;;
-    5)
-        update_skyport_daemon
-        ;;
-    6)
-        backup_installations
-        ;;
-    7)
-        remove_installation
-        ;;
-    *)
-        echo "Invalid choice. Please enter a number between 1 and 7."
-        exit 1
-        ;;
-esac
+done

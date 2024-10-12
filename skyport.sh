@@ -109,10 +109,8 @@ setup_skyport_panel() {
 }
 
 # --- Function to Clone and Set Up the Skyport Daemon ---
+# Function to clone and set up the Skyport Daemon
 setup_skyport_daemon() {
-    echo "Installing dependencies for Skyport Daemon..."
-    install_dependencies
-
     echo "Choose an option for cloning Skyport Daemon:"
     echo "1. Clone latest build"
     echo "2. Clone a specific version"
@@ -143,6 +141,8 @@ setup_skyport_daemon() {
     fi
 
     cd skyportd || { echo "Failed to change directory to skyportd"; exit 1; }
+
+    echo "Installing dependencies for Skyport Daemon..."
     npm install
 
     if [ $? -ne 0 ]; then
@@ -150,7 +150,14 @@ setup_skyport_daemon() {
         exit 1
     fi
 
-    echo "Skyport Daemon installed successfully."
+    echo "Dependencies for Skyport Daemon installed successfully."
+
+    # Prompt for command to run after installation
+    read -p "Enter the command to run after configuring the daemon: " daemon_command
+    eval "$daemon_command"
+
+    echo "Starting Skyport Daemon with PM2..."
+    pm2 start index.js -n skyportd
 }
 
 # --- Function to Backup Installations ---

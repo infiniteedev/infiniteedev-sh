@@ -176,7 +176,7 @@ setup_skyport_daemon() {
     echo "Dependencies for Skyport Daemon installed successfully."
 
     # Prompt for command to run after installation
-    read -p "Enter the command to run after configuring the daemon: " daemon_command
+    read -p "Enter the command to configure the daemon with the panel: " daemon_command
     eval "$daemon_command"
 
     echo "Starting Skyport Daemon with PM2..."

@@ -180,7 +180,7 @@ setup_skyport_daemon() {
     read -p "Enter the command to configure the daemon with the panel: " daemon_command
     eval "$daemon_command"
 
-    echo "Starting Skyport Daemon with PM2..."
+    echo "Starting Skyport Daemon with node ..."
     node .
 }
 

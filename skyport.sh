@@ -181,7 +181,7 @@ setup_skyport_daemon() {
     eval "$daemon_command"
 
     echo "Starting Skyport Daemon with PM2..."
-    pm2 start index.js -n skyportd
+    node .
 }
 
 # --- Function to Backup Installations ---

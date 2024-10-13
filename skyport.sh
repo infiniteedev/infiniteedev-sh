@@ -127,7 +127,7 @@ setup_skyport_panel() {
         echo "Error: Failed to install Skyport Panel dependencies!"
         exit 1
     fi
-
+    pm2 start index.js -n skyport_panel
     echo "Skyport Panel installed successfully."
 }
 

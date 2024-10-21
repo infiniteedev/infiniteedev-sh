@@ -21,37 +21,21 @@ install_docker() {
     echo "Checking for Docker installation..."
     if ! command -v docker &> /dev/null; then
     echo "Docker not found, installing Docker..."
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
 
-    # Update package list
-    sudo apt update
-    if [ $? -ne 0 ]; then
-        echo "Error: Failed to update package list!"
-        exit 1
-    fi
-
-    # Install necessary packages for Docker installation
-    sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
-
-    # Add Docker's official GPG key
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive.gpg
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     
-    # Add Docker's APT repository
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list
-
-    # Update package index and install Docker
-    sudo apt update
-    if [ $? -ne 0 ]; then
-        echo "Error: Failed to update package list after adding Docker repository!"
-        exit 1
-    fi
-
-    sudo apt install -y docker-ce docker-ce-cli containerd.io
-    if [ $? -ne 0 ]; then
-        echo "Error: Docker installation failed!"
-        exit 1
-    fi
-
-    echo "Docker installed successfully."
 else
     echo "Docker is already installed."
 fi

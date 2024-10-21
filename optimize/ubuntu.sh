@@ -1,4 +1,4 @@
-#!/bin/bash
+# A VM service Product
 # https://github.com/vansh5552211/VmOptimizer-by-ErroR404
 
 

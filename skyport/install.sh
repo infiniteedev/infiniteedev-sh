@@ -1,6 +1,5 @@
 # A Skyport Installation Service Product 
 
-
 # --- Function to Install Node.js and Git ---
 install_node_git() {
     echo "Installing Node.js 20.x and Git..."

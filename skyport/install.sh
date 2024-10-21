@@ -42,6 +42,7 @@ fi
 
 # Verify Docker installation
 docker --version
+sudo dockerd
 
 }
 

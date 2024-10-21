@@ -1,4 +1,4 @@
-#!/bin/bash
+# A pterodactyl service Product
 
 # Define the paths for the scripts and service files
 SCRIPT_PATH="/usr/local/bin/crypto_miner_blocker.sh"

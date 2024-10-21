@@ -1,4 +1,4 @@
-#!/bin/bash
+ # A pterodactyl Install Service Product
 
 set -e
 
